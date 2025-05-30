@@ -1,36 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 
 export default function TabLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#000',
-        tabBarInactiveTintColor: '#000',
-        headerShown: false,
-        tabBarStyle: {
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          backgroundColor: '#fff',
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: -2,
+    <View style={{ flex: 1, backgroundColor: '#f0f0f0' }}>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: '#000',
+          tabBarInactiveTintColor: '#000',
+          headerShown: false,
+          tabBarStyle: {
+            paddingBottom: 5,
+            paddingTop: 5,
+            height: 60,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            backgroundColor: '#fff',
+            shadowColor: '#000',
+            shadowOffset: {
+              width: 0,
+              height: -3,
+            },
+            shadowOpacity: 0.5,
+            shadowRadius: 8,
+            elevation: 10,
+            borderTopWidth: 0,
           },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 10,
-          borderTopWidth: 0,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
-        },
-      }}
-    >
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: '500',
+          },
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -102,5 +104,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }
