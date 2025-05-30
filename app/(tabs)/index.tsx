@@ -1,6 +1,9 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   FlatList,
+  Image,
+  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -8,13 +11,13 @@ import {
 } from 'react-native';
 
 const dates = [
-  { day: 'MON', date: '05 MAY' },
-  { day: 'TUE', date: '06 MAY' },
-  { day: 'WED', date: '07 MAY' },
-  { day: 'THU', date: '08 MAY' },
-  { day: 'FRI', date: '09 MAY' },
-  { day: 'SAT', date: '10 MAY' },
-  { day: 'SUN', date: '11 MAY' },
+  { day: 'MON', date: '05', month: 'MAY' },
+  { day: 'TUE', date: '06', month: 'MAY' },
+  { day: 'WED', date: '07', month: 'MAY' },
+  { day: 'THU', date: '08', month: 'MAY' },
+  { day: 'FRI', date: '09', month: 'MAY' },
+  { day: 'SAT', date: '10', month: 'MAY' },
+  { day: 'SUN', date: '11', month: 'MAY' },
 ];
 
 const timeSlots = [
@@ -29,37 +32,54 @@ const timeSlots = [
 ];
 
 export default function HomeScreen() {
-  const [selectedDate, setSelectedDate] = useState('07 MAY');
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState('07');
+  const [selectedTime, setSelectedTime] = useState('08:30');
   const [activeTab, setActiveTab] = useState('Booking');
+  const [isFavorite, setIsFavorite] = useState(false);
   const listRef = useRef<FlatList>(null);
 
-  const scrollToIndex = (index: number) => {
-    listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
-  };
-
-  const renderItem = ({ item, index }: { item: any; index: number }) => {
+  const renderDateItem = ({ item, index }: { item: any; index: number }) => {
     const isSelected = item.date === selectedDate;
     return (
       <TouchableOpacity
         style={[styles.dateItem, isSelected && styles.selectedDate]}
-        onPress={() => {
-          setSelectedDate(item.date);
-          scrollToIndex(index);
-        }}>
+        onPress={() => setSelectedDate(item.date)}>
         <Text style={[styles.dayText, isSelected && styles.selectedText]}>{item.day}</Text>
         <Text style={[styles.dateNumber, isSelected && styles.selectedText]}>
-          {item.date.split(' ')[0]}
+          {item.date}
         </Text>
-        <Text style={[styles.dateMonth, isSelected && styles.selectedText]}>
-          {item.date.split(' ')[1]}
+        <Text style={[styles.monthText, isSelected && styles.selectedText]}>
+          {item.month}
         </Text>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.logoContainer}>
+          <View style={styles.logo}>
+            <Image 
+              source={require('../../assets/images/padlcenter.png')} 
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.facilityName}>Padlcenter trosa Vagnharad</Text>
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.favoriteButton}
+          onPress={() => setIsFavorite(!isFavorite)}
+        >
+          <Text style={styles.favoriteText}>Favorite</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         {['Home', 'Booking', 'Activities', 'Membership'].map((tab) => (
           <TouchableOpacity
@@ -79,181 +99,208 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      {selectedDate && selectedTime && (
-        <View style={styles.bookingInfo}>
-          <Text style={styles.summaryText}>
-            You selected {selectedDate} at {selectedTime}
-          </Text>
-          <TouchableOpacity style={styles.bookButton} onPress={() => alert('Booking confirmed!')}>
-            <Text style={styles.bookButtonText}>Book Now</Text>
-          </TouchableOpacity>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Date Selection */}
+        <View style={styles.dateSection}>
+          <FlatList
+            ref={listRef}
+            data={dates}
+            horizontal
+            keyExtractor={(item) => item.date}
+            renderItem={renderDateItem}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dateList}
+          />
         </View>
-      )}
-      <View style={styles.listWrapper}>
-        <FlatList
-          ref={listRef}
-          data={dates}
-          horizontal
-          keyExtractor={(item) => item.date}
-          renderItem={renderItem}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateList}
-          getItemLayout={(data, index) => (
-            { length: 80, offset: 80 * index, index }
-          )}
-        />
-      </View>
-      <View>
 
-      </View>
-      <View style={styles.slotGrid}>
-        {timeSlots.map((slot) => (
-          <TouchableOpacity
-            key={slot}
-            style={[
-              styles.slotItem,
-              selectedTime === slot && styles.slotItemSelected,
-            ]}
-            onPress={() => setSelectedTime(slot)}
-          >
-            <Text style={[
-              styles.slotText,
-              selectedTime === slot && styles.slotTextSelected,
-            ]}>
-              {slot}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
+        {/* Time Zone Info */}
+        <Text style={styles.timezoneText}>Central time zone: Europe/Stockholm</Text>
 
+        {/* Time Slots Grid */}
+        <View style={styles.timeSlotsContainer}>
+          <View style={styles.slotGrid}>
+            {timeSlots.map((slot) => (
+              <TouchableOpacity
+                key={slot}
+                style={[
+                  styles.slotItem,
+                  selectedTime === slot && styles.slotItemSelected,
+                ]}
+                onPress={() => setSelectedTime(slot)}
+              >
+                <Text style={[
+                  styles.slotText,
+                  selectedTime === slot && styles.slotTextSelected,
+                ]}>
+                  {slot}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+    width: '100%',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    maxWidth: '75%',
+  },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#E74C3C',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 64,
+    height: 64,
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  facilityName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 2,
+  },
+  facilityLocation: {
+    fontSize: 14,
+    color: '#7F8C8D',
+  },
+  favoriteButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#00E8B1',
+    backgroundColor: 'transparent',
+    maxWidth: 100,
+  },
+  favoriteText: {
+    color: '#00E8B1',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 10,
-    backgroundColor: '#F0F0F0', // light background like Figma
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    gap: 8,
   },
   tabButton: {
-    paddingVertical: 10,
+    flex: 1,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    marginHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
+    alignItems: 'center',
   },
   tabButtonActive: {
     backgroundColor: '#00E8B1',
-    borderColor: '#00E8B1',
   },
   tabText: {
     fontSize: 14,
-    color: '#000',
+    color: '#6C757D',
     fontWeight: '500',
   },
   tabTextActive: {
-    fontWeight: '700',
-    color: '#000',
-  },
-
-
-  bookingInfo: {
-    marginTop: 24,
-    alignItems: 'center',
-    paddingBottom: 40,
-  },
-  summaryText: {
-    fontSize: 16,
+    color: '#FFFFFF',
     fontWeight: '600',
-    marginBottom: 12,
-    color: '#222',
   },
-  bookButton: {
-    backgroundColor: '#00E8B1',
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  bookButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  container: {
+  content: {
     flex: 1,
-    backgroundColor: '#F0F0F0',
-    paddingTop: 60,
-    alignItems: 'center',
   },
-  listWrapper: {
-    width: '95%',
-    left: 10,
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 45,
-    borderBottomLeftRadius: 45,
-    overflow: 'hidden',
+  dateSection: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 20,
+    marginTop: 1,
   },
   dateList: {
-
+    paddingHorizontal: 20,
+    gap: 12,
   },
   dateItem: {
-    width: 60,
-    height: 60,
-    borderRadius: 45,
-    // marginHorizontal: 5,
+    width: 70,
+    paddingVertical: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
   },
   selectedDate: {
     backgroundColor: '#00E8B1',
-    width: 60,
-    height: 60,
   },
   dayText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#000',
+    color: '#6C757D',
+    marginBottom: 4,
   },
   dateNumber: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#2C3E50',
+    marginBottom: 2,
   },
-  dateMonth: {
+  monthText: {
     fontSize: 12,
-    color: '#000',
+    color: '#6C757D',
+    fontWeight: '500',
   },
   selectedText: {
-    color: '#000',
+    color: '#FFFFFF',
   },
-
-
+  timezoneText: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#ADB5BD',
+    marginVertical: 16,
+  },
+  timeSlotsContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
   slotGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginTop: 40,
+    gap: 8,
   },
   slotItem: {
-    width: 68,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#FFF',
+    width: '18%',
+    aspectRatio: 2,
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 4,
-    marginTop: 12,
+    marginBottom: 8,
   },
   slotItemSelected: {
     backgroundColor: '#00E8B1',
@@ -261,9 +308,9 @@ const styles = StyleSheet.create({
   slotText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: '#2C3E50',
   },
   slotTextSelected: {
-    color: '#000',
+    color: '#FFFFFF',
   },
 });
