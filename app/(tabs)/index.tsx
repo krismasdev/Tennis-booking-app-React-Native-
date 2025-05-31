@@ -302,7 +302,7 @@ export default function HomeScreen() {
     // Scroll to courts section position (approximate position where courts start)
     setTimeout(() => {
       // Calculate approximate position: carousel(250) + header(90) + tabs(70) + dates(70) + timezone(50) + timeslots(400)
-      const courtsPosition = 250 + 90 + 70 + 70 + 50 + 600;
+      const courtsPosition = 250 + 90 + 70 + 70 + 500 + 600;
       scrollViewRef.current?.scrollTo({ y: courtsPosition, animated: true });
     }, 100);
   };

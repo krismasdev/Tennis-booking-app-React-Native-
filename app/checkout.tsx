@@ -2,13 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function CheckoutScreen() {
@@ -36,14 +36,14 @@ export default function CheckoutScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <Text style={styles.headerTitle}>Checkout</Text>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
-        <View style={styles.headerRight} />
+        {/* <View style={styles.headerRight} /> */}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -100,10 +100,12 @@ export default function CheckoutScreen() {
               ]}>
                 {selectedPaymentMethod === 'split' && <View style={styles.radioButtonInner} />}
               </View>
-              <Text style={styles.paymentText}>Split Payment</Text>
-              <TouchableOpacity style={styles.infoButton}>
-                <Ionicons name="information-circle-outline" size={16} color="#666" />
-              </TouchableOpacity>
+              <View style={styles.splitPaymentContainer}>
+                <Text style={styles.paymentText}>Split Payment</Text>
+                <TouchableOpacity style={styles.infoButton}>
+                  <Ionicons name="help-circle" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
             </View>
             <Text style={styles.paymentAmount}>103 {bookingDetails.currency}</Text>
           </TouchableOpacity>
@@ -172,10 +174,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 24,
+    textAlign: 'left',
     fontWeight: '600',
     color: '#000',
   },
@@ -286,6 +289,7 @@ const styles = StyleSheet.create({
   },
   infoButton: {
     marginLeft: 8,
+    padding: 2,
   },
   paymentAmount: {
     fontSize: 16,
@@ -327,5 +331,10 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     fontWeight: '600',
+  },
+  splitPaymentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
 }); 
