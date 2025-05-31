@@ -52,7 +52,7 @@ export default function CheckoutScreen() {
           <View style={styles.bookingHeader}>
             <View style={styles.logoContainer}>
               <Image 
-                source={require('../assets/images/padlcenter.png')} 
+                source={require('../assets/images/padelcenter.png')} 
                 style={styles.logo}
                 resizeMode="contain"
               />

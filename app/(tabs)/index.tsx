@@ -6,8 +6,8 @@ import {
   FlatList,
   Image,
   Modal,
-  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -165,6 +165,8 @@ export default function HomeScreen() {
   const [selectedSlot, setSelectedSlot] = useState<{ court: number | null, slot: number | null }>({ court: null, slot: null });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedPickerDate, setSelectedPickerDate] = useState(new Date());
+  const [selectedPickerMonth, setSelectedPickerMonth] = useState<number | null>(null);
+  const [selectedPickerYear, setSelectedPickerYear] = useState<number | null>(null);
   const [pickerMonth, setPickerMonth] = useState(new Date().getMonth());
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
   const [dates, setDates] = useState<DateItem[]>(() => generateDateList(new Date()));
@@ -219,27 +221,56 @@ export default function HomeScreen() {
     <TouchableOpacity
       style={styles.addDateItem}
       onPress={() => {
-        resetDatePicker();
+        initializeDatePicker();
         setShowDatePicker(true);
       }}>
       <Ionicons name="add" size={32} color="#6C757D" />
     </TouchableOpacity>
   );
 
-  const handleDatePickerChange = (day: number) => {
-    const selectedDate = new Date(pickerYear, pickerMonth, day);
+  const handleDatePickerChange = (day: number, isAdjacentMonth?: boolean, isNextMonth?: boolean) => {
+    let targetMonth = pickerMonth;
+    let targetYear = pickerYear;
+    
+    // Handle adjacent month navigation
+    if (isAdjacentMonth) {
+      if (isNextMonth) {
+        // Next month day clicked
+        if (pickerMonth === 11) {
+          targetMonth = 0;
+          targetYear = pickerYear + 1;
+        } else {
+          targetMonth = pickerMonth + 1;
+        }
+      } else {
+        // Previous month day clicked
+        if (pickerMonth === 0) {
+          targetMonth = 11;
+          targetYear = pickerYear - 1;
+        } else {
+          targetMonth = pickerMonth - 1;
+        }
+      }
+      
+      // Update the picker to show the target month
+      setPickerMonth(targetMonth);
+      setPickerYear(targetYear);
+    }
+    
+    const selectedDate = new Date(targetYear, targetMonth, day);
     const formattedDay = day.toString().padStart(2, '0');
     
-    // Update the selected date
+    // Update the selected date and month/year tracking
     setSelectedDate(formattedDay);
+    setSelectedPickerMonth(targetMonth);
+    setSelectedPickerYear(targetYear);
     
     // Generate new date list starting from selected date
     const newDates = generateDateList(selectedDate, 17);
     setDates(newDates);
     
-    // Close the modal and reset picker
+    // Close the modal without resetting picker state
     setShowDatePicker(false);
-    resetDatePicker();
   };
 
   // Generate dates for current month in calendar format
@@ -252,9 +283,23 @@ export default function HomeScreen() {
     
     const calendarDates = [];
     
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < startDayOfWeek; i++) {
-      calendarDates.push({ day: null, disabled: true });
+    // Add days from previous month
+    if (startDayOfWeek > 0) {
+      const prevMonth = pickerMonth === 0 ? 11 : pickerMonth - 1;
+      const prevYear = pickerMonth === 0 ? pickerYear - 1 : pickerYear;
+      const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate();
+      
+      for (let i = startDayOfWeek - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        const date = new Date(prevYear, prevMonth, day);
+        const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        calendarDates.push({ 
+          day: day.toString(), 
+          disabled: isPast,
+          isAdjacentMonth: true,
+          isNextMonth: false
+        });
+      }
     }
     
     // Add all days of the current month
@@ -262,9 +307,27 @@ export default function HomeScreen() {
       const date = new Date(pickerYear, pickerMonth, day);
       const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
       calendarDates.push({ 
-        day: day, 
+        day: day.toString(), 
         disabled: isPast,
-        isToday: day === today.getDate() && pickerMonth === today.getMonth() && pickerYear === today.getFullYear()
+        isToday: day === today.getDate() && pickerMonth === today.getMonth() && pickerYear === today.getFullYear(),
+        isAdjacentMonth: false,
+        isNextMonth: false
+      });
+    }
+    
+    // Add days from next month to fill remaining spaces (up to 42 total for 6 weeks)
+    const remainingCells = 42 - calendarDates.length;
+    const nextMonth = pickerMonth === 11 ? 0 : pickerMonth + 1;
+    const nextYear = pickerMonth === 11 ? pickerYear + 1 : pickerYear;
+    
+    for (let day = 1; day <= remainingCells; day++) {
+      const date = new Date(nextYear, nextMonth, day);
+      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      calendarDates.push({ 
+        day: day.toString(), 
+        disabled: isPast,
+        isAdjacentMonth: true,
+        isNextMonth: true
       });
     }
     
@@ -290,9 +353,24 @@ export default function HomeScreen() {
   };
 
   const resetDatePicker = () => {
+    // Only reset the view to today's month, don't reset selection
     const today = new Date();
     setPickerMonth(today.getMonth());
     setPickerYear(today.getFullYear());
+    // Don't reset selectedPickerMonth and selectedPickerYear here
+  };
+
+  const initializeDatePicker = () => {
+    // If there's already a selected date, show that month
+    if (selectedPickerMonth !== null && selectedPickerYear !== null) {
+      setPickerMonth(selectedPickerMonth);
+      setPickerYear(selectedPickerYear);
+    } else {
+      // Otherwise show today's month
+      const today = new Date();
+      setPickerMonth(today.getMonth());
+      setPickerYear(today.getFullYear());
+    }
   };
 
   const handleTimeSlotPress = (slot: any) => {
@@ -326,7 +404,7 @@ export default function HomeScreen() {
                 styles.courtSlot,
                 slot.selected && styles.courtSlotSelected,
                 !slot.available && styles.courtSlotUnavailable,
-                selectedSlot.court === court.id && selectedSlot.slot === index && styles.courtSlotActive
+                (selectedSlot.court !== null && selectedSlot.slot !== null && selectedSlot.court === court.id && selectedSlot.slot === index) && styles.courtSlotActive
               ]}
               onPress={() => slot.available && handleCourtSlotPress(court.id, index)}
               disabled={!slot.available}
@@ -334,14 +412,14 @@ export default function HomeScreen() {
               <Text style={[
                 styles.courtSlotText,
                 slot.selected && styles.courtSlotTextSelected,
-                selectedSlot.court === court.id && selectedSlot.slot === index && styles.courtSlotTextActive
+                (selectedSlot.court !== null && selectedSlot.slot !== null && selectedSlot.court === court.id && selectedSlot.slot === index) && styles.courtSlotTextActive
               ]}>
                 {slot.duration}
               </Text>
               <Text style={[
                 styles.courtSlotPrice,
                 slot.selected && styles.courtSlotTextSelected,
-                selectedSlot.court === court.id && selectedSlot.slot === index && styles.courtSlotTextActive
+                (selectedSlot.court !== null && selectedSlot.slot !== null && selectedSlot.court === court.id && selectedSlot.slot === index) && styles.courtSlotTextActive
               ]}>
                 {slot.price}
               </Text>
@@ -358,7 +436,7 @@ export default function HomeScreen() {
                 styles.courtSlotSingle,
                 court.slots[2].selected && styles.courtSlotSelected,
                 !court.slots[2].available && styles.courtSlotUnavailable,
-                selectedSlot.court === court.id && selectedSlot.slot === 2 && styles.courtSlotActive
+                (selectedSlot.court !== null && selectedSlot.slot !== null && selectedSlot.court === court.id && selectedSlot.slot === 2) && styles.courtSlotActive
               ]}
               onPress={() => court.slots[2].available && handleCourtSlotPress(court.id, 2)}
               disabled={!court.slots[2].available}
@@ -366,14 +444,14 @@ export default function HomeScreen() {
               <Text style={[
                 styles.courtSlotText,
                 court.slots[2].selected && styles.courtSlotTextSelected,
-                selectedSlot.court === court.id && selectedSlot.slot === 2 && styles.courtSlotTextActive
+                (selectedSlot.court !== null && selectedSlot.slot !== null && selectedSlot.court === court.id && selectedSlot.slot === 2) && styles.courtSlotTextActive
               ]}>
                 {court.slots[2].duration}
               </Text>
               <Text style={[
                 styles.courtSlotPrice,
                 court.slots[2].selected && styles.courtSlotTextSelected,
-                selectedSlot.court === court.id && selectedSlot.slot === 2 && styles.courtSlotTextActive
+                (selectedSlot.court !== null && selectedSlot.slot !== null && selectedSlot.court === court.id && selectedSlot.slot === 2) && styles.courtSlotTextActive
               ]}>
                 {court.slots[2].price}
               </Text>
@@ -423,7 +501,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar hidden={true} />
       {/* Fixed Top Navigation Overlay */}
       <View style={styles.topNavigation}>
         <TouchableOpacity 
@@ -441,7 +520,7 @@ export default function HomeScreen() {
         ref={scrollViewRef}
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
-          autoscrollToTopThreshold: null,
+          autoscrollToTopThreshold: 0,
         }}
         automaticallyAdjustContentInsets={false}
       >
@@ -503,13 +582,13 @@ export default function HomeScreen() {
           <View style={styles.logoContainer}>
             <View style={styles.logo}>
               <Image 
-                source={require('../../assets/images/padlcenter.png')} 
+                source={require('../../assets/images/padelcenter.png')} 
                 style={styles.logoImage}
                 resizeMode="contain"
               />
             </View>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.facilityName}>Padlcenter trosa Vagnharad</Text>
+              <Text style={styles.facilityName}>Padelcenter trosa Vagnharad</Text>
             </View>
           </View>
           <TouchableOpacity 
@@ -672,35 +751,50 @@ export default function HomeScreen() {
               </View>
               
               <View style={styles.datePickerGrid}>
-                {generateCalendarDates().map((dateItem, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.datePickerItem,
-                      dateItem.disabled && styles.datePickerItemDisabled,
-                      dateItem.isToday && styles.datePickerItemToday,
-                      selectedDate === dateItem.day?.toString().padStart(2, '0') && styles.datePickerItemSelected
-                    ]}
-                    onPress={() => !dateItem.disabled && dateItem.day && handleDatePickerChange(dateItem.day)}
-                    disabled={dateItem.disabled || !dateItem.day}
-                  >
-                    <Text style={[
-                      styles.datePickerText,
-                      dateItem.disabled && styles.datePickerTextDisabled,
-                      dateItem.isToday && styles.datePickerTextToday,
-                      selectedDate === dateItem.day?.toString().padStart(2, '0') && styles.datePickerTextSelected
-                    ]}>
-                      {dateItem.day || ''}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {generateCalendarDates().map((dateItem, index) => {
+                  const isSelected = dateItem.day && !dateItem.isAdjacentMonth && 
+                    selectedDate === dateItem.day.padStart(2, '0') && 
+                    selectedPickerMonth === pickerMonth && 
+                    selectedPickerYear === pickerYear;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.datePickerItem,
+                        dateItem.disabled && styles.datePickerItemDisabled,
+                        dateItem.isAdjacentMonth && styles.datePickerItemAdjacent,
+                        dateItem.isToday && !isSelected && styles.datePickerItemToday,
+                        isSelected && styles.datePickerItemSelected
+                      ]}
+                      onPress={() => {
+                        if (dateItem.isAdjacentMonth) {
+                          handleDatePickerChange(parseInt(dateItem.day), true, dateItem.isNextMonth);
+                        } else if (!dateItem.disabled && dateItem.day) {
+                          handleDatePickerChange(parseInt(dateItem.day));
+                        }
+                      }}
+                      disabled={dateItem.disabled || !dateItem.day}
+                    >
+                      <Text style={[
+                        styles.datePickerText,
+                        dateItem.disabled && styles.datePickerTextDisabled,
+                        dateItem.isAdjacentMonth && styles.datePickerTextAdjacent,
+                        dateItem.isToday && !isSelected && styles.datePickerTextToday,
+                        isSelected && styles.datePickerTextSelected
+                      ]}>
+                        {dateItem.day || ''}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
               
               <TouchableOpacity 
                 style={styles.modalCloseButton}
                 onPress={() => {
                   setShowDatePicker(false);
-                  resetDatePicker();
+                  // Don't reset picker state, preserve selection
                 }}
               >
                 <Text style={styles.modalCloseText}>Cancel</Text>
@@ -709,7 +803,7 @@ export default function HomeScreen() {
           </View>
         </Modal>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -717,6 +811,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f0f0',
+    paddingTop: 0,
   },
   mainScrollView: {
     flex: 1,
@@ -782,27 +877,32 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
     backgroundColor: '#F0F0F0',
     marginBottom: 12,
-    gap: 8,
+    gap: 6,
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
   },
   tabButton: {
-    flex: 1,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: '#FFF',
     alignItems: 'center',
+    minWidth: 60,
+    flexShrink: 1,
   },
   tabButtonActive: {
     backgroundColor: '#00E8B1',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6C757D',
     fontWeight: '500',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   tabTextActive: {
     color: '#000',
@@ -1210,14 +1310,13 @@ const styles = StyleSheet.create({
   datePickerGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
     justifyContent: 'space-between',
-    width: 280,
+    width: 300,
   },
   datePickerItem: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1236,23 +1335,50 @@ const styles = StyleSheet.create({
   datePickerTextSelected: {
     color: '#000',
   },
-  monthYearText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  monthNavigationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
+    paddingHorizontal: 10,
+    width: 300,
+  },
+  monthNavButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  monthYearText: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#2C3E50',
+    textAlign: 'center',
+    minWidth: 180,
   },
   dayNamesContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
-    width: 280,
+    width: 300,
   },
   dayNameText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#2C3E50',
-    width: 36,
+    width: 38,
     textAlign: 'center',
   },
   datePickerItemDisabled: {
@@ -1268,15 +1394,12 @@ const styles = StyleSheet.create({
   datePickerTextToday: {
     color: '#000',
   },
-  monthNavigationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
+  datePickerItemAdjacent: {
+    backgroundColor: '#F8F9FA',
+    opacity: 0.6,
   },
-  monthNavButton: {
-    padding: 10,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
-    elevation: 3,
+  datePickerTextAdjacent: {
+    color: '#ADB5BD',
+    fontSize: 13,
   },
 });
