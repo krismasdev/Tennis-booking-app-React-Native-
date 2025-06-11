@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
 import {
   Dimensions,
@@ -10,12 +11,12 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-  
+
 const { width, height } = Dimensions.get('window');
-  
+
 // Theme type definition
 type Theme = 'inline' | 'outline';
-  
+
 export default function HomeScreen() {
   const [selectedDate, setSelectedDate] = useState(12);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -29,13 +30,16 @@ export default function HomeScreen() {
   const [selectedDuration, setSelectedDuration] = useState<number>(90);
   // Add theme state
   const [currentTheme, setCurrentTheme] = useState<Theme>('inline');
-  
+  // Add payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('Apple pay');
+
   // Separate state for the base date that generates the circular date list
   const [baseDateForList, setBaseDateForList] = useState(12);
-  
+
   // Ref for main ScrollView
   const mainScrollRef = useRef<ScrollView>(null);
-  
+
   const monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -48,12 +52,12 @@ export default function HomeScreen() {
   const getFirstDayOfMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
-  
+
   // Create array of dates for scrollable list - now dynamic based on baseDateForList
   const generateDates = (startDate: number) => {
     const dates = [];
     const maxDaysInMonth = getDaysInMonth(calendarDate);
-    
+
     for (let i = 0; i < 15; i++) {
       const currentDate = startDate + i;
       if (currentDate <= maxDaysInMonth) {
@@ -64,7 +68,7 @@ export default function HomeScreen() {
     }
     return dates;
   };
-  
+
   const dates = generateDates(baseDateForList);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -81,14 +85,14 @@ export default function HomeScreen() {
     const daysInMonth = getDaysInMonth(calendarDate);
     const firstDay = getFirstDayOfMonth(calendarDate);
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
       days.push(
         <View key={`empty-${i}`} style={styles.calendarDay} />
       );
     }
-    
+
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const isSelected = day === selectedCalendarDate;
@@ -109,7 +113,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       );
     }
-    
+
     return days;
   };
 
@@ -195,12 +199,57 @@ export default function HomeScreen() {
     setCurrentTheme(currentTheme === 'inline' ? 'outline' : 'inline');
   };
 
+  // Open payment modal function
+  const openPaymentModal = () => {
+    setShowPaymentModal(true);
+  };
+
+  // Get current price based on selected duration
+  const getCurrentPrice = () => {
+    switch (selectedDuration) {
+      case 60:
+        return '36,00 €';
+      case 90:
+        return '54,00 €';
+      case 120:
+        return '72,00 €';
+      default:
+        return '54,00 €';
+    }
+  };
+
+  // Get formatted booking date and time
+  const getBookingDateTime = () => {
+    if (!selectedTimeSlot) return 'Please select a time slot';
+
+    const endTime = calculateEndTime(selectedTimeSlot, selectedDuration);
+    return `${getFormattedDate(selectedDate)}, ${selectedTimeSlot}-${endTime}`;
+  };
+
+  // Calculate end time based on start time and duration
+  const calculateEndTime = (startTime: string, duration: number) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + duration;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+  };
+
+  // Get venue information
+  const getVenueInfo = () => {
+    return {
+      name: 'Moon play Arena',
+      address: 'Koncfuku g. 214, Vievis'
+    };
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
+
       {/* Main Scrollable Content */}
-      <ScrollView 
+      <ScrollView
         ref={mainScrollRef}
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -212,7 +261,7 @@ export default function HomeScreen() {
           style={styles.backgroundImage}
           resizeMode="cover"
         />
-        
+
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.profileSection}>
@@ -222,7 +271,7 @@ export default function HomeScreen() {
             />
           </View>
           {/* Theme Toggle Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.themeToggleButton,
               currentTheme === 'outline' && styles.themeToggleButtonOutline
@@ -237,7 +286,7 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        
+
         {/* Main Content */}
         <View style={styles.content}>
           {/* Greeting Section */}
@@ -248,14 +297,14 @@ export default function HomeScreen() {
               <Text style={styles.levelText}>⭐ 8.5 Tennis Game level</Text>
             </View>
           </View>
-          
+
           {/* Booking Section */}
           <View style={styles.bookingSection}>
             <Text style={styles.bookingsTitle}>Your Bookings</Text>
-            
+
             {/* Booking Cards */}
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.bookingCards}
             >
@@ -264,7 +313,7 @@ export default function HomeScreen() {
                 currentTheme === 'outline' && styles.bookingCardOutline
               ]}>
                 <View style={styles.cardIcon}>
-                  <Image 
+                  <Image
                     source={require('../../assets/images/ball-icon.png')}
                     style={styles.iconImage}
                   />
@@ -273,20 +322,20 @@ export default function HomeScreen() {
                   <Text style={[
                     styles.venueName,
                     currentTheme === 'outline' && styles.venueNameOutline
-                  ]}>Flushing<br/>Meadows</Text>
+                  ]}>Flushing<br />Meadows</Text>
                   <Text style={[
                     styles.bookingTime,
                     currentTheme === 'outline' && styles.bookingTimeOutline
                   ]}>Sat 21 oct, 14:00-16:00</Text>
                 </View>
               </View>
-              
+
               <View style={[
                 styles.bookingCard,
                 currentTheme === 'outline' && styles.bookingCardOutline
               ]}>
                 <View style={styles.cardIcon}>
-                  <Image 
+                  <Image
                     source={require('../../assets/images/ball-icon.png')}
                     style={styles.iconImage}
                   />
@@ -295,20 +344,20 @@ export default function HomeScreen() {
                   <Text style={[
                     styles.venueName,
                     currentTheme === 'outline' && styles.venueNameOutline
-                  ]}>Gran Slam<br/>Grass</Text>
+                  ]}>Gran Slam<br />Grass</Text>
                   <Text style={[
                     styles.bookingTime,
                     currentTheme === 'outline' && styles.bookingTimeOutline
                   ]}>Sat 21 oct, 14:00-16:00</Text>
                 </View>
               </View>
-              
+
               <View style={[
                 styles.bookingCard,
                 currentTheme === 'outline' && styles.bookingCardOutline
               ]}>
                 <View style={styles.cardIcon}>
-                  <Image 
+                  <Image
                     source={require('../../assets/images/ball-icon.png')}
                     style={styles.iconImage}
                   />
@@ -317,7 +366,7 @@ export default function HomeScreen() {
                   <Text style={[
                     styles.venueName,
                     currentTheme === 'outline' && styles.venueNameOutline
-                  ]}>Wimbledon<br/>Grass</Text>
+                  ]}>Wimbledon<br />Grass</Text>
                   <Text style={[
                     styles.bookingTime,
                     currentTheme === 'outline' && styles.bookingTimeOutline
@@ -330,7 +379,7 @@ export default function HomeScreen() {
                 currentTheme === 'outline' && styles.bookingCardOutline
               ]}>
                 <View style={styles.cardIcon}>
-                  <Image 
+                  <Image
                     source={require('../../assets/images/ball-icon.png')}
                     style={styles.iconImage}
                   />
@@ -339,7 +388,7 @@ export default function HomeScreen() {
                   <Text style={[
                     styles.venueName,
                     currentTheme === 'outline' && styles.venueNameOutline
-                  ]}>Roland<br/>Clay</Text>
+                  ]}>Roland<br />Clay</Text>
                   <Text style={[
                     styles.bookingTime,
                     currentTheme === 'outline' && styles.bookingTimeOutline
@@ -353,7 +402,7 @@ export default function HomeScreen() {
           <View style={styles.reserveSection}>
             <Text style={styles.reserveText}>Reserve your</Text>
             <Text style={styles.courtText}>Tennis court</Text>
-            
+
             {/* Date Selection Card */}
             <View style={[
               styles.dateSelectionCard,
@@ -363,21 +412,21 @@ export default function HomeScreen() {
                 styles.selectionText,
                 currentTheme === 'outline' && styles.selectionTextOutline
               ]}>
-                Selecting the days available in{''} 
+                Selecting the days available in{''}
                 <TouchableOpacity onPress={openDatePicker} style={styles.monthButton}>
                   <Text style={styles.highlightText}>{selectedMonth}</Text>
                 </TouchableOpacity>
                 at <Text style={styles.venueNameText}>Moon arena</Text>
               </Text>
-                            
+
               {/* Date Buttons */}
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.dateButtonsContainer}
               >
                 {dates.map((date) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     key={date}
                     style={[
                       styles.circularDateButton,
@@ -387,7 +436,7 @@ export default function HomeScreen() {
                     onPress={() => handleDateButtonPress(date)}
                   >
                     {selectedDate === date && currentTheme === 'inline' && (
-                      <Image 
+                      <Image
                         source={require('../../assets/images/datebutton.png')}
                         style={styles.selectedDateImage}
                       />
@@ -412,20 +461,20 @@ export default function HomeScreen() {
                       </View>
                     ) : (
                       <Text style={[
-                        styles.circularDateText, 
+                        styles.circularDateText,
                         selectedDate === date && styles.selectedDateText
                       ]}>{date}</Text>
                     )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-              
+
               {/* Booking Now Button */}
               <TouchableOpacity style={[
                 styles.bookingButton,
                 currentTheme === 'outline' && styles.bookingButtonOutline
               ]}>
-                <Image 
+                <Image
                   source={require('../../assets/images/padel.png')}
                   style={styles.bookingButtonIcon}
                 />
@@ -511,7 +560,7 @@ export default function HomeScreen() {
 
                 {/* Price Options */}
                 <View style={styles.priceOptionsInlineContainer}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[
                       styles.priceOptionInline,
                       currentTheme === 'outline' && styles.priceOptionInlineOutline,
@@ -534,7 +583,7 @@ export default function HomeScreen() {
                     ]}>60 min</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[
                       styles.priceOptionInline,
                       currentTheme === 'outline' && styles.priceOptionInlineOutline,
@@ -557,7 +606,7 @@ export default function HomeScreen() {
                     ]}>90 min</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[
                       styles.priceOptionInline,
                       currentTheme === 'outline' && styles.priceOptionInlineOutline,
@@ -603,7 +652,10 @@ export default function HomeScreen() {
                     styles.paymentMethodText,
                     currentTheme === 'outline' && styles.paymentMethodTextOutline
                   ]}>
-                    Your default payment is <Text style={styles.applePayText}>Apple Pay</Text>.
+                    Your default payment is{''}
+                    <TouchableOpacity onPress={openPaymentModal} style={styles.applePayButton}>
+                      <Text style={styles.applePayText}>{selectedPaymentMethod}</Text>
+                    </TouchableOpacity>.
                   </Text>
                 </View>
 
@@ -613,7 +665,7 @@ export default function HomeScreen() {
                   currentTheme === 'outline' && styles.finalBookingButtonOutline
                 ]}>
                   <View style={styles.bookingButtonContent}>
-                    <Image 
+                    <Image
                       source={require('../../assets/images/padel.png')}
                       style={styles.finalBookingButtonIcon}
                     />
@@ -648,42 +700,42 @@ export default function HomeScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Select Date</Text>
-              
+
               {/* Month Navigation */}
               <View style={styles.monthNavigation}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.navButton}
                   onPress={() => navigateMonth('prev')}
                 >
                   <Text style={styles.navButtonText}>‹</Text>
                 </TouchableOpacity>
-                
+
                 <Text style={styles.monthYearText}>
                   {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
                 </Text>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={styles.navButton}
                   onPress={() => navigateMonth('next')}
                 >
                   <Text style={styles.navButtonText}>›</Text>
                 </TouchableOpacity>
               </View>
-              
+
               {/* Days of Week Header */}
               <View style={styles.daysHeader}>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                   <Text key={day} style={styles.dayHeaderText}>{day}</Text>
                 ))}
               </View>
-              
+
               {/* Calendar Grid */}
               <View style={styles.calendarGrid}>
                 {renderCalendarDays()}
               </View>
-              
+
               {/* Cancel Button */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setShowDatePicker(false)}
               >
@@ -693,10 +745,139 @@ export default function HomeScreen() {
           </View>
         </Modal>
       )}
+
+      {/* Payment Selection Modal */}
+      {showPaymentModal && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showPaymentModal}
+          onRequestClose={() => setShowPaymentModal(false)}
+        >
+          <View style={styles.paymentModalOverlay}>
+            <View style={styles.paymentModalContent}>
+              {/* Header */}
+              <View style={styles.paymentModalHeader}>
+                <Text style={styles.paymentModalTitle}>Payment Selection</Text>
+                <TouchableOpacity
+                  style={styles.paymentModalCloseButton}
+                  onPress={() => setShowPaymentModal(false)}
+                >
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Booking Details */}
+              <View style={styles.paymentBookingDetails}>
+                <View style={styles.paymentBookingIcon}>
+                  <Image
+                    source={require('../../assets/images/ball-icon.png')}
+                    style={styles.paymentBookingIconImage}
+                  />
+                </View>
+                <View style={styles.paymentBookingInfo}>
+                  <Text style={styles.paymentBookingDate}>
+                    {getBookingDateTime()}
+                  </Text>
+                  <Text style={styles.paymentBookingVenue}>
+                    {getVenueInfo().name}
+                  </Text>
+                  <Text style={styles.paymentBookingAddress}>
+                    {getVenueInfo().address}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Payment Methods */}
+              <View style={styles.paymentMethodsList}>
+                <TouchableOpacity
+                  style={styles.paymentMethodItem}
+                  onPress={() => setSelectedPaymentMethod('Apple pay')}
+                >
+                  <View style={styles.paymentMethodLeft}>
+                    <View style={[
+                      styles.paymentMethodRadio,
+                      selectedPaymentMethod === 'Apple pay' && styles.paymentMethodRadioSelected
+                    ]}>
+                      {selectedPaymentMethod === 'Apple pay' && (
+                        <View style={styles.paymentMethodRadioInner} />
+                      )}
+                    </View>
+                    <Text style={styles.paymentMethodName}>Apple pay</Text>
+                  </View>
+                  <Text style={styles.paymentMethodPrice}>{getCurrentPrice()}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.paymentMethodItem}
+                  onPress={() => setSelectedPaymentMethod('Bank link')}
+                >
+                  <View style={styles.paymentMethodLeft}>
+                    <View style={[
+                      styles.paymentMethodRadio,
+                      selectedPaymentMethod === 'Bank link' && styles.paymentMethodRadioSelected
+                    ]}>
+                      {selectedPaymentMethod === 'Bank link' && (
+                        <View style={styles.paymentMethodRadioInner} />
+                      )}
+                    </View>
+                    <Text style={styles.paymentMethodName}>Bank link</Text>
+                    <TouchableOpacity style={styles.infoButton}>
+                      <Ionicons name="help-circle" size={20} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.paymentMethodPrice}>{getCurrentPrice()}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.paymentMethodItem}
+                  onPress={() => setSelectedPaymentMethod('Credit card')}
+                >
+                  <View style={styles.paymentMethodLeft}>
+                    <View style={[
+                      styles.paymentMethodRadio,
+                      selectedPaymentMethod === 'Credit card' && styles.paymentMethodRadioSelected
+                    ]}>
+                      {selectedPaymentMethod === 'Credit card' && (
+                        <View style={styles.paymentMethodRadioInner} />
+                      )}
+                    </View>
+                    <Text style={styles.paymentMethodName}>Credit card</Text>
+                    <TouchableOpacity style={styles.infoButton}>
+                      <Ionicons name="help-circle" size={20} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.paymentMethodPrice}>{getCurrentPrice()}</Text>
+                </TouchableOpacity>
+
+                {/* Add Payment Method Button */}
+                {/* <TouchableOpacity style={styles.addPaymentMethodButton}>
+                  <Text style={styles.addPaymentMethodText}>+</Text>
+                </TouchableOpacity> */}
+                <TouchableOpacity
+                  style={styles.expandableSection}
+                >
+                  <Ionicons
+                    name={"add"}
+                    size={24}
+                    color="#000"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Go to Payment Button */}
+              <TouchableOpacity style={styles.goToPaymentButton}>
+                <Text style={styles.goToPaymentButtonText}>Go to payment</Text>
+              </TouchableOpacity>
+
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
-  
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -744,7 +925,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-  },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+  },
   menuButton: {
     padding: 10,
   },
@@ -1018,7 +1199,7 @@ const styles = StyleSheet.create({
     height: 89,
     borderRadius: 22,
     justifyContent: 'center',
-    alignItems: 'center', 
+    alignItems: 'center',
     position: 'relative',
   },
   highlightText: {
@@ -1242,8 +1423,8 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 16,
     fontWeight: '600',
-    marginTop:-2,
-    marginBottom:2
+    marginTop: -2,
+    marginBottom: 2
   },
   timeSlotTimeOutline: {
     color: '#333',
@@ -1442,6 +1623,7 @@ const styles = StyleSheet.create({
   paymentSelectionContainer: {
     backgroundColor: '#fff',
     padding: 20,
+    paddingBottom: 40,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1471,7 +1653,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   selectedCircularDateButtonOutline: {
-    backgroundColor: '#fff', 
+    backgroundColor: '#fff',
     borderColor: '#0149BA',
     borderWidth: 3,
   },
@@ -1564,5 +1746,185 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -6,
   },
+  applePayButton: {
+    padding: 5,
+  },
+  paymentModalOverlay: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  paymentModalContent: {
+    flex: 1,
+    backgroundColor: '#f8f8f8',
+    paddingHorizontal: 0,
+  },
+  paymentModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  paymentModalTitle: {
+    fontSize: 24,
+    textAlign: 'left',
+    fontWeight: '600',
+    color: '#000',
+  },
+  paymentModalCloseButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  paymentBookingDetails: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 20,
+    marginHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paymentBookingIcon: {
+    marginRight: 15,
+  },
+  paymentBookingIconImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  paymentBookingInfo: {
+    flex: 1,
+  },
+  paymentBookingDate: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  paymentBookingVenue: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  paymentBookingAddress: {
+    color: '#666',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  paymentMethodsList: {
+    flex: 1,
+    marginHorizontal: 20,
+  },
+  paymentMethodItem: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  paymentMethodLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  paymentMethodRadio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    marginRight: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentMethodRadioSelected: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#3b82f6',
+  },
+  paymentMethodRadioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
+  paymentMethodName: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '400',
+    flex: 1,
+  },
+  infoButton: {
+    marginLeft: 8,
+    padding: 2,
+  },
+  paymentMethodPrice: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  paymentMethodIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#9ca3af',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  paymentMethodIconText: {
+    color: '#fff',
+    fontSize: 12,
+    // fontWeight: 'bold',
+  },
+  addPaymentMethodButton: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 20,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    // marginRight: 20,
+    marginBottom: 20,
+  },
+  addPaymentMethodText: {
+    color: '#6b7280',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginRight: 20,
+  },
+  goToPaymentButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 16,
+    marginBottom: 40,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goToPaymentButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  expandableSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 15,
+  },
+  expandableTitle: {
+    fontSize: 16,
+    color: '#000',
+    fontWeight: '500',
+  },
 });
-  
